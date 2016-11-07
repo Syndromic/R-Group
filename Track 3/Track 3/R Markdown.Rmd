@@ -1,0 +1,173 @@
+---
+title: "Reproducible Biosurveillance with knitR"
+fontsize: 10pt
+date: Dec 8, 2015
+output: beamer_presentation
+        
+---
+
+# Motivation for using knitR
+## Increase efficiency of own workflow
+
+Don't have to jump back and forth between \newline
+
+**Microsoft Word, Microsoft Excel, and R**
+
+\vspace{5mm}
+
+\begin{center}
+\includegraphics{homer.jpg}
+\end{center}
+
+##Allows others to verify one's results
+
+\begin{center}
+\includegraphics{FarSide_RocketScientists.jpg}
+\end{center}
+
+\begin{center}
+Everybody makes mistakes: reproducibility enables corrections.
+\end{center}
+
+##This was made with knitR
+\begin{center}
+\includegraphics{advancedR.jpg}
+\end{center}
+
+
+#Can create various outputs 
+##PDF, Word, HTML, Beamer presentation
+
+\begin{center}
+\includegraphics{metadata.jpg}
+\end{center}
+
+For PDF...replace **beamer_presentation** with **pdf_document** \newline
+For Word...replace **beamer_presentation** with **word_document**\newline
+For HTML...replace **beamer_presentation** with **html_document**\newline
+
+#Some RMarkdown syntax
+##Have to create empy spaces and new lines
+The
+answer
+is 
+4.
+
+$\;$
+$\;$
+
+The \newline
+answer \newline
+is \newline
+4.\newline
+
+##Embolden,italicize, change font color
+**R is free**
+
+$\;$
+$\;$
+
+*R is free*
+
+$\;$
+$\;$
+
+\textcolor{red}{R is free}
+        
+#Embed R code
+##Embed R code with chunks
+
+```{r,}
+bob=rnorm(100)
+summary(bob)
+```
+
+##If you have chunks that take a long time to run
+
+Put this below metadata section
+
+\begin{center}
+\includegraphics{chunks.jpg}
+\end{center}
+
+##Embed R code with inline expressions 
+The number of days in a week multipled by the number of hours in a day: `r 7 * 24`
+
+#Embed equations
+## Place equation in a sentence
+The number of days in a week multipled by the number of hours in a day: $z-score = \frac{x-\mu_x}{\sigma_x}$
+
+
+
+##Make equation the star of a slide
+$$z-score = \frac{x-\mu_x}{\sigma_x}$$
+
+##For more complicated equations 
+
+Download
+
+http://www.lyx.org/
+
+Create equation with point-and-click, convert to Latex, then paste in Rmd file
+
+#Embed images
+##Embed images
+\begin{center}
+\includegraphics{sas.jpg}
+\end{center}
+
+#Making tables
+##Simple tables with the **printr** package
+```{r }
+library(printr)
+options(digits = 4)
+set.seed(123)
+x = matrix(rnorm(40), 5)
+x = as.data.frame(x)
+x
+```
+
+
+##Modify table
+```{r}
+knitr::kable(x, digits = 2, caption = "A table produced by printr.")
+```
+
+
+##Just show output
+```{r, echo=FALSE }
+library(printr)
+options(digits = 4)
+set.seed(123)
+x = matrix(rnorm(40), 5)
+x = as.data.frame(x)
+x
+```
+
+
+
+##Use Latex or Excel for more complicated tables
+\begin{center}
+\includegraphics{ComplexTable.jpg}
+\end{center}
+
+##If you choose the path of Latex
+http://www.tablesgenerator.com/
+
+#Compile directly from R scripts
+##Compile directly from R scripts
+
+rmarkdown::render("example.R","pdf_document")
+
+#To learn more
+## Visit this website
+http://rmarkdown.rstudio.com/
+
+## Download cheat sheet
+http://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf
+
+#Walk through some Rmd files that you can take home
+##Walk through some Rmd files that you can take home
+- R Markdown.Rmd (for this presentation)
+- overview.Rmd
+- Shiny_Intro.Rmd

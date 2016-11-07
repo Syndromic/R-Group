@@ -1,0 +1,17 @@
+{
+    "contents" : "library(shiny)\n\n\n# Read in Google Flu Trends data from its website\ngoogle_data = read.csv(file   =  \"http://www.google.org/flutrends/about/data/flu/us/data.txt\", \n                       header = TRUE,       \n                       skip   = 10) \n\n# Next, we use the google_data to create a list of location names.  \n# The location names are the names of the columns in our data table.  \n# We remove the first column, since it is the column for date, and is not a location.\nloc_names = sort(names(google_data[,-1]))\n\n# Define the UI for the google flu trends plot demo\nshinyUI(fluidPage(\n  \n  #  Application title\n  titlePanel(\"Google Flu Trends\"),\n  \n  # Gives the ui a layout with a control panel on the left side and a plot next to it\n  sidebarLayout(\n    \n    #Specify the contents of the control panel\n    sidebarPanel(\n      \n      # Allow user to choose the location they wish to view.  \n      # This will create a user input variable called \"location\".\n      selectInput(inputId  = \"location\", \n                  label    = \"Choose a location:\", \n                  choices  = loc_names, \n                  selected = \"Iowa\"),\n      \n      # Allow user to choose the range of dates they wish to plot.  \n      # This will create a user input variable called \"dateRange\",\n      dateRangeInput(inputId = 'dateRange',\n                     label   = 'Date range input: yyyy-mm-dd',\n                     start   = \"2013-08-01\", \n                     end     = \"2015-07-01\") # Date when Google Flu Trends stopped providing data\n    ),\n    \n    # Here we specify the plot to be shown to the user.  \n    # Our plot is called \"google_plot\", and is created in the server.R file.\n    mainPanel(\n      plotOutput(\"google_plot\")\n    )\n  )\n))\n",
+    "created" : 1449591552950.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1847511277",
+    "id" : "D01D838B",
+    "lastKnownWriteTime" : 1449280158,
+    "path" : "C:/Users/ericb/Dropbox/R code/ISDS R/Track 3/Track 3/Nicks Basic App/ui.R",
+    "project_path" : "Nicks Basic App/ui.R",
+    "properties" : {
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "type" : "r_source"
+}

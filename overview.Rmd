@@ -1,0 +1,87 @@
+---
+ title: "Advanced Use of R for Biosurveillance"
+ date: "Dec 8, 2015"
+ bibliography: 
+ header-includes:
+    - \usepackage{tikzsymbols}
+ fontsize: 10pt    
+ output: 
+   beamer_presentation:
+     theme: "Marburg"
+     slide_level: 2
+
+---
+# What should I do before we meet?
+##Install this software
+0
+- Go to this link by clicking on it
+
+{\small http://rprogramming.net/create-html-or-pdf-files-with-r-knitr-miktex-and-pandoc/}
+
+Follow steps **1** and **2**
+
+- install these packages: *knitr*, *rmarkdown*, *shiny*, *devtools*
+
+  with the the function: **install.packages()**
+
+- install the package *printr*
+
+  with the command: **devtools::install_github( "yihui/printr")**
+ 
+
+##Find a dataset and bring it the workshop
+
+You will use the dataset to begin to build your own browser-based point-and-click interface for non-programmers to use R. The interface will be built with the **shiny** package.
+     
+
+# Who we are?
+##Who we are?
+
+- **Vivek Khatri, PhD, MHS** $\newline$
+  DoD Data Scientist $\newline$
+  khatri1976@gmail.com $\newline$
+
+- **Nicholas Michaud, PhD candidate** $\newline$
+  PhD Student $\newline$
+  Iowa State University $\newline$
+  Department of Statistics $\newline$
+  michaud@iastate.edu $\newline$
+  
+- **Ian Painter, PhD** $\newline$
+  Clinical Assistant Professor $\newline$
+  University of Washington $\newline$ 
+  School of Public Health $\newline$
+  ipainter@uw.edu $\newline$
+  
+# Morning
+##Morning
+
+- 8:20 to 8:45....**OPTIONAL** $\newline$ 
+Make sure needed software is installed $\newline$ (RStudio, a Latex distribution, Rtools)
+$\newline$
+- 8:45 to 9:45....**Shiny part I (Vivek)** $\newline$ 
+Introduction to the Shiny package 
+$\newline$ 
+- 9:45 to 10:00....**Morning break** $\newline$
+- 10:00 to 11:00....**Shiny part II (Nick)** $\newline$
+Demonstration of his Shiny 'apps' $\newline$ 
+- 11:00 to 12:00...Build Shiny apps with **data from home**  $\newline$ 
+- 12:00 to 1:00....**Lunch** 
+
+# Afternoon
+##Afternoon
+
+- 1:00 to 1:45....**Intro to knitR (Vivek)** $\newline$
+How to make this presentation and other stuff in RStudio $\newline$
+- 1:45 to 2:15....**Importing data into R (Ian)** $\newline$ 
+- 2:15 to 2:30....**Break** $\newline$ 
+- 2:30 to 3:00....**R language fundamentals (Ian)** $\newline$ 
+- 3:00 to 4:00....**Free time to play with new R knowledge**
+
+# Additional resources
+##Get this book
+
+\begin{center}
+\includegraphics{advancedR.jpg}
+\end{center}
+

@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<meta name="generator" content="pandoc" />
+
+<title>Functional programming</title>
+
+<script src="www/jquery-1.11.0/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="www/bootstrap-3.3.1/css/bootstrap.min.css" rel="stylesheet" />
+<script src="www/bootstrap-3.3.1/js/bootstrap.min.js"></script>
+<script src="www/bootstrap-3.3.1/shim/html5shiv.min.js"></script>
+<script src="www/bootstrap-3.3.1/shim/respond.min.js"></script>
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+
+
+
+</head>
+
+<body>
+
+<div class="container">
+
+
+
+<h1 id="functional-programming">Functional programming</h1>
+<p>R, at its heart, is a functional programming (FP) language. This means that it provides many tools for the creation and manipulation of functions. In particular, R has what’s known as first class functions. You can do anything with functions that you can do with vectors: you can assign them to variables, store them in lists, pass them as arguments to other functions, create them inside functions, and even return them as the result of a function. </p>
+<p>The chapter starts by showing a motivating example, removing redundancy and duplication in code used to clean and summarise data. Then you’ll learn about the three building blocks of functional programming: anonymous functions, closures (functions written by functions), and lists of functions. These pieces are twined together in the conclusion which shows how to build a suite of tools for numerical integration, starting from very simple primitives. This is a recurring theme in FP: start with small, easy-to-understand building blocks, combine them into more complex structures, and apply them with confidence.</p>
+<p>The discussion of functional programming continues in the following two chapters: <a href="#functionals">functionals</a> explores functions that take functions as arguments and return vectors as output, and <a href="#function-operators">function operators</a> explores functions that take functions as input and return them as output.</p>
+<h5>Outline</h5>
+<ul>
+<li><p><a href="#fp-motivation">Motivation</a> motivates functional programming using a common problem: cleaning and summarising data before serious analysis.</p></li>
+<li><p><a href="#anonymous-functions">Anonymous functions</a> shows you a side of functions that you might not have known about: you can use functions without giving them a name.</p></li>
+<li><p><a href="#closures">Closures</a> introduces the closure, a function written by another function. A closure can access its own arguments, and variables defined in its parent.</p></li>
+<li><p><a href="#lists-of-functions">Lists of functions</a> shows how to put functions in a list, and explains why you might care.</p></li>
+<li><p><a href="#numerical-integration">Numerical integration</a> concludes the chapter with a case study that uses anonymous functions, closures and lists of functions to build a flexible toolkit for numerical integration.</p></li>
+</ul>
+<h5>Prequisites</h5>
+<p>You should be familiar with the basic rules of lexical scoping, as described in <a href="#lexical-scoping">lexical scoping</a>. Make sure you’ve installed the pryr package with <code>install.packages(&quot;pryr&quot;)</code></p>
+<!--
+#### Other languages
+
+While FP techniques form the core of languages like Haskell, OCaml and F#, those techniques can also be found in other languages. They are well supported in multi-paradigm systems like Lisp, Scheme, Clojure and Scala. Also, while they tend not to be the dominant technique used by programmers, they can be used in modern scripting languages like Python, Ruby and JavaScript. In contrast, C, Java and C# provide few functional tools, and while it's possible to do FP in those languages, it tends to be an awkward fit. In sum, if you Google for it you're likely to find a tutorial on functional programming in any language. But doing so can often be syntactically awkward or used so rarely that other programmers won't understand your code.
+
+Recently FP has experienced a surge in interest because it provides a complementary set of techniques to object oriented programming, the dominant style for the last several decades. Since FP functions tend to not modify their inputs, they make for programs that are easier to reason about using only local information, and are often easier to parallelise. The traditional weaknesses of FP languages, poorer performance and sometimes unpredictable memory usage, have been largely eliminated in recent years.
+-->
+<h2 id="fp-motivation">Motivation</h2>
+<p>Imagine you’ve loaded a data file, like the one below, that uses <span class="math">\(-99\)</span> to represent missing values. You want to replace all the <span class="math">\(-99\)</span>s with <code>NA</code>s.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate a sample dataset</span>
+<span class="kw">set.seed</span>(<span class="dv">1014</span>)
+df &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="kw">replicate</span>(<span class="dv">6</span>, <span class="kw">sample</span>(<span class="kw">c</span>(<span class="dv">1</span>:<span class="dv">10</span>, -<span class="dv">99</span>), <span class="dv">6</span>, <span class="dt">rep =</span> <span class="ot">TRUE</span>)))
+<span class="kw">names</span>(df) &lt;-<span class="st"> </span>letters[<span class="dv">1</span>:<span class="dv">6</span>]
+df
+<span class="co">#&gt;    a  b c   d   e f</span>
+<span class="co">#&gt; 1  1  6 1   5 -99 1</span>
+<span class="co">#&gt; 2 10  4 4 -99   9 3</span>
+<span class="co">#&gt; 3  7  9 5   4   1 4</span>
+<span class="co">#&gt; 4  2  9 3   8   6 8</span>
+<span class="co">#&gt; 5  1 10 5   9   8 6</span>
+<span class="co">#&gt; 6  6  2 1   3   8 5</span></code></pre>
+<p>When you first started writing R code, you might have solved the problem with copy-and-paste:</p>
+<pre class="sourceCode r"><code class="sourceCode r">df$a[df$a ==<span class="st"> </span>-<span class="dv">99</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+df$b[df$b ==<span class="st"> </span>-<span class="dv">99</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+df$c[df$c ==<span class="st"> </span>-<span class="dv">98</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+df$d[df$d ==<span class="st"> </span>-<span class="dv">99</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+df$e[df$e ==<span class="st"> </span>-<span class="dv">99</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+df$f[df$g ==<span class="st"> </span>-<span class="dv">99</span>] &lt;-<span class="st"> </span><span class="ot">NA</span></code></pre>
+<p>One problem with copy-and-paste is that it’s easy to make mistakes. Can you spot the two in the block above? These mistakes are inconsistencies that arose because we didn’t have an authorative description of the desired action (replace <span class="math">\(-99\)</span> with <code>NA</code>). Duplicating an action makes bugs more likely and makes it harder to change code. For example, if the code for a missing value changes from <span class="math">\(-99\)</span> to 9999, you’d need to make the change in multiple places.</p>
+<p>To prevent bugs and to make more flexible code, adopt the “do not repeat yourself”, or DRY, principle. Popularised by the <a href="http://pragprog.com/about">“pragmatic programmers”</a>, Dave Thomas and Andy Hunt, this principle states: “every piece of knowledge must have a single, unambiguous, authoritative representation within a system”. FP tools are valuable because they provide tools to reduce duplication.</p>
+<p>We can start applying FP ideas by writing a function that fixes the missing values in a single vector:</p>
+<pre class="sourceCode r"><code class="sourceCode r">fix_missing &lt;-<span class="st"> </span>function(x) {
+  x[x ==<span class="st"> </span>-<span class="dv">99</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+  x
+}
+df$a &lt;-<span class="st"> </span><span class="kw">fix_missing</span>(df$a)
+df$b &lt;-<span class="st"> </span><span class="kw">fix_missing</span>(df$b)
+df$c &lt;-<span class="st"> </span><span class="kw">fix_missing</span>(df$c)
+df$d &lt;-<span class="st"> </span><span class="kw">fix_missing</span>(df$d)
+df$e &lt;-<span class="st"> </span><span class="kw">fix_missing</span>(df$e)
+df$f &lt;-<span class="st"> </span><span class="kw">fix_missing</span>(df$e)</code></pre>
+<p>This reduces the scope of possible mistakes, but it doesn’t eliminate them: you can no longer accidentally type -98 instead of -99, but you can still mess up the name of variable. The next step is to remove this possible source of error by combining two functions. One function, <code>fix_missing()</code>, knows how to fix a single vector; the other, <code>lapply()</code>, knows how to do something to each column in a data frame.</p>
+<p><code>lapply()</code> takes three inputs: <code>x</code>, a list; <code>f</code>, a function; and <code>...</code>, other arguments to pass to <code>f()</code>. It applies the function to each element of the list and returns a new list. <code>lapply(x, f, ...)</code> is equivalent to the following for loop:</p>
+<pre class="sourceCode r"><code class="sourceCode r">out &lt;-<span class="st"> </span><span class="kw">vector</span>(<span class="st">&quot;list&quot;</span>, <span class="kw">length</span>(x))
+for (i in <span class="kw">seq_along</span>(x)) {
+  out[[i]] &lt;-<span class="st"> </span><span class="kw">f</span>(x[[i]], ...)
+}</code></pre>
+<p>The real <code>lapply()</code> is rather more complicated since it’s implemented in C for efficiency, but the essence of the algorithm is the same. <code>lapply()</code> is called a <strong>functional</strong>, because it takes a function as an argument. Functionals are an important part of functional programming. You’ll learn more about them in <a href="#functionals">functionals</a>.</p>
+<p>We can apply <code>lapply()</code> to this problem because data frames are lists. We just need a neat little trick to make sure we get back a data frame, not a list. Instead of assigning the results of <code>lapply()</code> to <code>df</code>, we’ll assign them to <code>df[]</code>. R’s usual rules ensure that we get a data frame, not a list. (If this comes as a surprise, you might want to read <a href="#subassignment">subsetting and assignment</a>.) Putting these pieces together gives us:</p>
+<pre class="sourceCode r"><code class="sourceCode r">fix_missing &lt;-<span class="st"> </span>function(x) {
+  x[x ==<span class="st"> </span>-<span class="dv">99</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+  x
+}
+df[] &lt;-<span class="st"> </span><span class="kw">lapply</span>(df, fix_missing)</code></pre>
+<p>This code has five advantages over copy and paste:</p>
+<ul>
+<li><p>It’s more compact.</p></li>
+<li><p>If the code for a missing value changes, it only needs to be updated in one place.</p></li>
+<li><p>It works for any number of columns. There is no way to accidentally miss a column.</p></li>
+<li><p>There is no way to accidentally treat one column differently than another.</p></li>
+<li><p>It is easy to generalise this technique to a subset of columns:</p>
+<pre class="sourceCode r"><code class="sourceCode r">df[<span class="dv">1</span>:<span class="dv">5</span>] &lt;-<span class="st"> </span><span class="kw">lapply</span>(df[<span class="dv">1</span>:<span class="dv">5</span>], fix_missing)</code></pre></li>
+</ul>
+<p>The key idea is function composition. Take two simple functions, one which does something to every column and one which fixes missing values, and combine them to fix missing values in every column. Writing simple functions that can be understood in isolation and then composed is a powerful technique.</p>
+<p>What if different columns used different codes for missing values? You might be tempted to copy-and-paste:</p>
+<pre class="sourceCode r"><code class="sourceCode r">fix_missing_99 &lt;-<span class="st"> </span>function(x) {
+  x[x ==<span class="st"> </span>-<span class="dv">99</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+  x
+}
+fix_missing_999 &lt;-<span class="st"> </span>function(x) {
+  x[x ==<span class="st"> </span>-<span class="dv">999</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+  x
+}
+fix_missing_9999 &lt;-<span class="st"> </span>function(x) {
+  x[x ==<span class="st"> </span>-<span class="dv">999</span>] &lt;-<span class="st"> </span><span class="ot">NA</span>
+  x
+}</code></pre>
+<p>As before, it’s easy to create bugs. Instead we could use closures, functions that make and return functions. Closures allow us to make functions based on a template:</p>
+<pre class="sourceCode r"><code class="sourceCode r">missing_fixer &lt;-<span class="st"> </span>function(na_value) {
+  function(x) {
+    x[x ==<span class="st"> </span>na_value] &lt;-<span class="st"> </span><span class="ot">NA</span>
+    x
+  }
+}
+fix_missing_99 &lt;-<span class="st"> </span><span class="kw">missing_fixer</span>(-<span class="dv">99</span>)
+fix_missing_999 &lt;-<span class="st"> </span><span class="kw">missing_fixer</span>(-<span class="dv">999</span>)
+
+<span class="kw">fix_missing_99</span>(<span class="kw">c</span>(-<span class="dv">99</span>, -<span class="dv">999</span>))
+<span class="co">#&gt; [1]   NA -999</span>
+<span class="kw">fix_missing_999</span>(<span class="kw">c</span>(-<span class="dv">99</span>, -<span class="dv">999</span>))
+<span class="co">#&gt; [1] -99  NA</span></code></pre>
+<div class="sidebar">
+<h3>
+Extra argument
+</h3>
+<p>In this case, you could argue that we should just add another argument:</p>
+<pre class="sourceCode r"><code class="sourceCode r">fix_missing &lt;-<span class="st"> </span>function(x, na.value) {
+  x[x ==<span class="st"> </span>na.value] &lt;-<span class="st"> </span><span class="ot">NA</span>
+  x
+}</code></pre>
+<p>That’s a reasonable solution here, but it doesn’t always work well in every situation. We’ll see more compelling uses for closures in <a href="#functionals-math">MLE</a>.</p>
+</div>
+<p>Now consider a related problem. Once you’ve cleaned up your data, you might want to compute the same set of numerical summaries for each variable. You could write code like this:</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">mean</span>(df$a)
+<span class="kw">median</span>(df$a)
+<span class="kw">sd</span>(df$a)
+<span class="kw">mad</span>(df$a)
+<span class="kw">IQR</span>(df$a)
+
+<span class="kw">mean</span>(df$b)
+<span class="kw">median</span>(df$b)
+<span class="kw">sd</span>(df$b)
+<span class="kw">mad</span>(df$b)
+<span class="kw">IQR</span>(df$b)</code></pre>
+<p>But again, you’d be better off identifying and removing duplicate items. Take a minute or two to think about how you might tackle this problem before reading on.</p>
+<p>One approach would be to write a summary function and then apply it to each column:</p>
+<pre class="sourceCode r"><code class="sourceCode r">summary &lt;-<span class="st"> </span>function(x) {
+  <span class="kw">c</span>(<span class="kw">mean</span>(x), <span class="kw">median</span>(x), <span class="kw">sd</span>(x), <span class="kw">mad</span>(x), <span class="kw">IQR</span>(x))
+}
+<span class="kw">lapply</span>(df, summary)</code></pre>
+<p>That’s a great start, but there’s still some duplication. It’s easier to see if we make the summary function more realistic:</p>
+<pre class="sourceCode r"><code class="sourceCode r">summary &lt;-<span class="st"> </span>function(x) {
+ <span class="kw">c</span>(<span class="kw">mean</span>(x, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),
+   <span class="kw">median</span>(x, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),
+   <span class="kw">sd</span>(x, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),
+   <span class="kw">mad</span>(x, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),
+   <span class="kw">IQR</span>(x, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>))
+}</code></pre>
+<p>All five functions are called with the same arguments (<code>x</code> and <code>na.rm</code>) repeated five times. As always, duplication makes our code fragile: it’s easier to introduce bugs and harder to adapt to changing requirements.</p>
+<p>To remove this source of duplication, you can take advantage of another functional programming technique: storing functions in lists.</p>
+<pre class="sourceCode r"><code class="sourceCode r">summary &lt;-<span class="st"> </span>function(x) {
+  funs &lt;-<span class="st"> </span><span class="kw">c</span>(mean, median, sd, mad, IQR)
+  <span class="kw">lapply</span>(funs, function(f) <span class="kw">f</span>(x, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>))
+}</code></pre>
+<p>This chapter discusses these techniques in more detail. But before you can start learning them, you need to learn the simplest FP tool, the anonymous function.</p>
+<h2 id="anonymous-functions">Anonymous functions</h2>
+<p>In R, functions are objects in their own right. They aren’t automatically bound to a name. Unlike many languages (e.g., C, C++, Python, and Ruby), R doesn’t have a special syntax for creating a named function: when you create a function, you use the regular assignment operator to give it a name. If you choose not to give the function a name, you get an <strong>anonymous function</strong>.  </p>
+<p>You use an anonymous function when it’s not worth the effort to give it a name:</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">lapply</span>(mtcars, function(x) <span class="kw">length</span>(<span class="kw">unique</span>(x)))
+<span class="kw">Filter</span>(function(x) !<span class="kw">is.numeric</span>(x), mtcars)
+<span class="kw">integrate</span>(function(x) <span class="kw">sin</span>(x) ^<span class="st"> </span><span class="dv">2</span>, <span class="dv">0</span>, pi)</code></pre>
+<p>Like all functions in R, anonymous functions have <code>formals()</code>, a <code>body()</code>, and a parent <code>environment()</code>:</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">formals</span>(function(<span class="dt">x =</span> <span class="dv">4</span>) <span class="kw">g</span>(x) +<span class="st"> </span><span class="kw">h</span>(x))
+<span class="co">#&gt; $x</span>
+<span class="co">#&gt; [1] 4</span>
+<span class="kw">body</span>(function(<span class="dt">x =</span> <span class="dv">4</span>) <span class="kw">g</span>(x) +<span class="st"> </span><span class="kw">h</span>(x))
+<span class="co">#&gt; g(x) + h(x)</span>
+<span class="kw">environment</span>(function(<span class="dt">x =</span> <span class="dv">4</span>) <span class="kw">g</span>(x) +<span class="st"> </span><span class="kw">h</span>(x))
+<span class="co">#&gt; &lt;environment: R_GlobalEnv&gt;</span></code></pre>
+<p>You can call an anonymous function without giving it a name, but the code is a little tricky to read because you must use parentheses in two different ways: first, to call a function, and second to make it clear that you want to call the anonymous function itself, as opposed to calling a (possibly invalid) function <em>inside</em> the anonymous function:</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># This does not call the anonymous function.</span>
+<span class="co"># (Note that &quot;3&quot; is not a valid function.)</span>
+function(x) <span class="dv">3</span>()
+<span class="co">#&gt; function(x) 3()</span>
+
+<span class="co"># With appropriate parenthesis, the function is called:</span>
+(function(x) <span class="dv">3</span>)()
+<span class="co">#&gt; [1] 3</span>
+
+<span class="co"># So this anonymous function syntax</span>
+(function(x) x +<span class="st"> </span><span class="dv">3</span>)(<span class="dv">10</span>)
+<span class="co">#&gt; [1] 13</span>
+
+<span class="co"># behaves exactly the same as</span>
+f &lt;-<span class="st"> </span>function(x) x +<span class="st"> </span><span class="dv">3</span>
+<span class="kw">f</span>(<span class="dv">10</span>)
+<span class="co">#&gt; [1] 13</span></code></pre>
+<p>You can call anonymous functions with named arguments, but doing so is a good sign that your function needs a name.</p>
+<p>One of the most common uses for anonymous functions is to create closures, functions made by other functions. Closures are described in the next section.</p>
+<h3>Exercises</h3>
+<ol style="list-style-type: decimal">
+<li><p>Given a function, like <code>&quot;mean&quot;</code>, <code>match.fun()</code> lets you find a function. Given a function, can you find its name? Why doesn’t that make sense in R?</p></li>
+<li><p>Use <code>lapply()</code> and an anonymous function to find the coefficient of variation (the standard deviation divided by the mean) for all columns in the <code>mtcars</code> dataset.</p></li>
+<li><p>Use <code>integrate()</code> and an anonymous function to find the area under the curve for the following functions. Use <a href="http://www.wolframalpha.com/">Wolfram Alpha</a> to check your answers.</p>
+<ol style="list-style-type: decimal">
+<li><code>y = x ^ 2 - x</code>, x in [0, 10]</li>
+<li><code>y = sin(x) + cos(x)</code>, x in [-<span class="math">\(\pi\)</span>, <span class="math">\(\pi\)</span>]</li>
+<li><code>y = exp(x) / x</code>, x in [10, 20]</li>
+</ol></li>
+<li><p>A good rule of thumb is that an anonymous function should fit on one line and shouldn’t need to use <code>{}</code>. Review your code. Where could you have used an anonymous function instead of a named function? Where should you have used a named function instead of an anonymous function?</p></li>
+</ol>
+<h2 id="closures">Closures</h2>
+<blockquote>
+<p>“An object is data with functions. A closure is a function with data.” — John D. Cook</p>
+</blockquote>
+<p>One use of anonymous functions is to create small functions that are not worth naming. Another important use is to create closures, functions written by functions. Closures get their name because they <strong>enclose</strong> the environment of the parent function and can access all its variables. This is useful because it allows us to have two levels of parameters: a parent level that controls operation and a child level that does the work.  </p>
+<p>The following example uses this idea to generate a family of power functions in which a parent function (<code>power()</code>) creates two child functions (<code>square()</code> and <code>cube()</code>).</p>
+<pre class="sourceCode r"><code class="sourceCode r">power &lt;-<span class="st"> </span>function(exponent) {
+  function(x) {
+    x ^<span class="st"> </span>exponent
+  }
+}
+
+square &lt;-<span class="st"> </span><span class="kw">power</span>(<span class="dv">2</span>)
+<span class="kw">square</span>(<span class="dv">2</span>)
+<span class="co">#&gt; [1] 4</span>
+<span class="kw">square</span>(<span class="dv">4</span>)
+<span class="co">#&gt; [1] 16</span>
+
+cube &lt;-<span class="st"> </span><span class="kw">power</span>(<span class="dv">3</span>)
+<span class="kw">cube</span>(<span class="dv">2</span>)
+<span class="co">#&gt; [1] 8</span>
+<span class="kw">cube</span>(<span class="dv">4</span>)
+<span class="co">#&gt; [1] 64</span></code></pre>
+<p>When you print a closure, you don’t see anything terribly useful:</p>
+<pre class="sourceCode r"><code class="sourceCode r">square
+<span class="co">#&gt; function(x) {</span>
+<span class="co">#&gt;     x ^ exponent</span>
+<span class="co">#&gt;   }</span>
+<span class="co">#&gt; &lt;environment: 0x00000000066d9150&gt;</span>
+cube
+<span class="co">#&gt; function(x) {</span>
+<span class="co">#&gt;     x ^ exponent</span>
+<span class="co">#&gt;   }</span>
+<span class="co">#&gt; &lt;environment: 0x00000000056c86d0&gt;</span></code></pre>
+<p>That’s because the function itself doesn’t change. The difference is the enclosing environment, <code>environment(square)</code>. One way to see the contents of the environment is to convert it to a list: </p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">as.list</span>(<span class="kw">environment</span>(square))
+<span class="co">#&gt; $exponent</span>
+<span class="co">#&gt; [1] 2</span>
+<span class="kw">as.list</span>(<span class="kw">environment</span>(cube))
+<span class="co">#&gt; $exponent</span>
+<span class="co">#&gt; [1] 3</span></code></pre>
+<p>Another way to see what’s going on is to use <code>pryr::unenclose()</code>. This function replaces variables defined in the enclosing environment with their values:</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(pryr)
+<span class="co">#&gt; </span>
+<span class="co">#&gt; Attaching package: &#39;pryr&#39;</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; The following object is masked _by_ &#39;.GlobalEnv&#39;:</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt;     f</span>
+<span class="kw">unenclose</span>(square)
+<span class="co">#&gt; function (x) </span>
+<span class="co">#&gt; {</span>
+<span class="co">#&gt;     x^2</span>
+<span class="co">#&gt; }</span>
+<span class="kw">unenclose</span>(cube)
+<span class="co">#&gt; function (x) </span>
+<span class="co">#&gt; {</span>
+<span class="co">#&gt;     x^3</span>
+<span class="co">#&gt; }</span></code></pre>
+<p>The parent environment of a closure is the execution environment of the function that created it, as shown by this code:</p>
+<pre class="sourceCode r"><code class="sourceCode r">power &lt;-<span class="st"> </span>function(exponent) {
+  <span class="kw">print</span>(<span class="kw">environment</span>())
+  function(x) x ^<span class="st"> </span>exponent
+}
+zero &lt;-<span class="st"> </span><span class="kw">power</span>(<span class="dv">0</span>)
+<span class="co">#&gt; &lt;environment: 0x0000000006290dd0&gt;</span>
+<span class="kw">environment</span>(zero)
+<span class="co">#&gt; &lt;environment: 0x0000000006290dd0&gt;</span></code></pre>
+<p>The execution environment normally disappears after the function returns a value. However, functions capture their enclosing environments. This means when function a returns function b, function b captures and stores the execution environment of function a, and it doesn’t disappear. (This has important consequences for memory use, see <a href="#gc">memory usage</a> for details.)</p>
+<p>In R, almost every function is a closure. All functions remember the environment in which they were created, typically either the global environment, if it’s a function that you’ve written, or a package environment, if it’s a function that someone else has written. The only exception is primitive functions, which call C code directly and don’t have an associated environment. </p>
+<p>Closures are useful for making function factories, and are one way to manage mutable state in R.</p>
+<h3>Function factories</h3>
+<p>A function factory is a factory for making new functions. We’ve already seen two examples of function factories, <code>missing_fixer()</code> and <code>power()</code>. You call it with arguments that describe the desired actions, and it returns a function that will do the work for you. For <code>missing_fixer()</code> and <code>power()</code>, there’s not much benefit in using a function factory instead of a single function with multiple arguments. Function factories are most useful when: </p>
+<ul>
+<li><p>The different levels are more complex, with multiple arguments and complicated bodies.</p></li>
+<li><p>Some work only needs to be done once, when the function is generated.</p></li>
+</ul>
+<p>Function factories are particularly well suited to maximum likelihood problems, and you’ll see a more compelling use of them in <a href="#functionals-math">mathematical functionals</a>.</p>
+<h3 id="mutable-state">Mutable state</h3>
+<p>Having variables at two levels allows you to maintain state across function invocations. This is possible because while the execution environment is refreshed every time, the enclosing environment is constant. The key to managing variables at different levels is the double arrow assignment operator (<code>&lt;&lt;-</code>). Unlike the usual single arrow assignment (<code>&lt;-</code>) that always assigns in the current environment, the double arrow operator will keep looking up the chain of parent environments until it finds a matching name. (<a href="#binding">Binding names to values</a> has more details on how it works.)  </p>
+<p>Together, a static parent environment and <code>&lt;&lt;-</code> make it possible to maintain state across function calls. The following example shows a counter that records how many times a function has been called. Each time <code>new_counter</code> is run, it creates an environment, initialises the counter <code>i</code> in this environment, and then creates a new function.</p>
+<pre class="sourceCode r"><code class="sourceCode r">new_counter &lt;-<span class="st"> </span>function() {
+  i &lt;-<span class="st"> </span><span class="dv">0</span>
+  function() {
+    i &lt;&lt;-<span class="st"> </span>i +<span class="st"> </span><span class="dv">1</span>
+    i
+  }
+}</code></pre>
+<p>The new function is a closure, and its enclosing environment is the environment created when <code>new_counter()</code> is run. Ordinarily, function execution environments are temporary, but a closure maintains access to the environment in which it was created. In the example below, closures <code>counter_one()</code> and <code>counter_two()</code> each get their own enclosing environments when run, so they can maintain different counts.</p>
+<pre class="sourceCode r"><code class="sourceCode r">counter_one &lt;-<span class="st"> </span><span class="kw">new_counter</span>()
+counter_two &lt;-<span class="st"> </span><span class="kw">new_counter</span>()
+
+<span class="kw">counter_one</span>()
+<span class="co">#&gt; [1] 1</span>
+<span class="kw">counter_one</span>()
+<span class="co">#&gt; [1] 2</span>
+<span class="kw">counter_two</span>()
+<span class="co">#&gt; [1] 1</span></code></pre>
+<p>The counters get around the “fresh start” limitation by not modifying variables in their local environment. Since the changes are made in the unchanging parent (or enclosing) environment, they are preserved across function calls.</p>
+<p>What happens if you don’t use a closure? What happens if you use <code>&lt;-</code> instead of <code>&lt;&lt;-</code>? Make predictions about what will happen if you replace <code>new_counter()</code> with the variants below, then run the code and check your predictions.</p>
+<pre class="sourceCode r"><code class="sourceCode r">i &lt;-<span class="st"> </span><span class="dv">0</span>
+new_counter2 &lt;-<span class="st"> </span>function() {
+  i &lt;&lt;-<span class="st"> </span>i +<span class="st"> </span><span class="dv">1</span>
+  i
+}
+new_counter3 &lt;-<span class="st"> </span>function() {
+  i &lt;-<span class="st"> </span><span class="dv">0</span>
+  function() {
+    i &lt;-<span class="st"> </span>i +<span class="st"> </span><span class="dv">1</span>
+    i
+  }
+}</code></pre>
+<p>Modifying values in a parent environment is an important technique because it is one way to generate “mutable state” in R. Mutable state is normally hard because every time it looks like you’re modifying an object, you’re actually creating and then modifying a copy. However, if you do need mutable objects and your code is not very simple, it’s usually better to use reference classes, as described in <a href="#rc">RC</a>.</p>
+<p>The power of closures is tightly coupled with the more advanced ideas in <a href="#functionals">functionals</a> and <a href="#function-operators">function operators</a>. You’ll see many more closures in those two chapters. The following section discusses the third technique of functional programming in R: the ability to store functions in a list.</p>
+<h3>Exercises</h3>
+<ol style="list-style-type: decimal">
+<li><p>Why are functions created by other functions called closures?</p></li>
+<li><p>What does the following statistical function do? What would be a better name for it? (The existing name is a bit of a hint.)</p>
+<pre class="sourceCode r"><code class="sourceCode r">bc &lt;-<span class="st"> </span>function(lambda) {
+  if (lambda ==<span class="st"> </span><span class="dv">0</span>) {
+    function(x) <span class="kw">log</span>(x)
+  } else {
+    function(x) (x ^<span class="st"> </span>lambda -<span class="st"> </span><span class="dv">1</span>) /<span class="st"> </span>lambda
+  }
+}</code></pre></li>
+<li><p>What does <code>approxfun()</code> do? What does it return?</p></li>
+<li><p>What does <code>ecdf()</code> do? What does it return?</p></li>
+<li><p>Create a function that creates functions that compute the ith <a href="http://en.wikipedia.org/wiki/Central_moment">central moment</a> of a numeric vector. You can test it by running the following code:</p>
+<pre class="sourceCode r"><code class="sourceCode r">m1 &lt;-<span class="st"> </span><span class="kw">moment</span>(<span class="dv">1</span>)
+m2 &lt;-<span class="st"> </span><span class="kw">moment</span>(<span class="dv">2</span>)
+
+x &lt;-<span class="st"> </span><span class="kw">runif</span>(<span class="dv">100</span>)
+<span class="kw">stopifnot</span>(<span class="kw">all.equal</span>(<span class="kw">m1</span>(x), <span class="dv">0</span>))
+<span class="kw">stopifnot</span>(<span class="kw">all.equal</span>(<span class="kw">m2</span>(x), <span class="kw">var</span>(x) *<span class="st"> </span><span class="dv">99</span> /<span class="st"> </span><span class="dv">100</span>))</code></pre></li>
+<li><p>Create a function <code>pick()</code> that takes an index, <code>i</code>, as an argument and returns a function with an argument <code>x</code> that subsets <code>x</code> with <code>i</code>.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">lapply</span>(mtcars, <span class="kw">pick</span>(<span class="dv">5</span>))
+<span class="co"># should do the same as this</span>
+<span class="kw">lapply</span>(mtcars, function(x) x[[<span class="dv">5</span>]])</code></pre></li>
+</ol>
+<h2 id="lists-of-functions">Lists of functions</h2>
+<p>In R, functions can be stored in lists. This makes it easier to work with groups of related functions, in the same way a data frame makes it easier to work with groups of related vectors. </p>
+<p>We’ll start with a simple benchmarking example. Imagine you are comparing the performance of multiple ways of computing the arithmetic mean. You could do this by storing each approach (function) in a list:</p>
+<pre class="sourceCode r"><code class="sourceCode r">compute_mean &lt;-<span class="st"> </span><span class="kw">list</span>(
+  <span class="dt">base =</span> function(x) <span class="kw">mean</span>(x),
+  <span class="dt">sum =</span> function(x) <span class="kw">sum</span>(x) /<span class="st"> </span><span class="kw">length</span>(x),
+  <span class="dt">manual =</span> function(x) {
+    total &lt;-<span class="st"> </span><span class="dv">0</span>
+    n &lt;-<span class="st"> </span><span class="kw">length</span>(x)
+    for (i in <span class="kw">seq_along</span>(x)) {
+      total &lt;-<span class="st"> </span>total +<span class="st"> </span>x[i] /<span class="st"> </span>n
+    }
+    total
+  }
+)</code></pre>
+<p>Calling a function from a list is straightforward. You extract it then call it:</p>
+<pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="kw">runif</span>(<span class="fl">1e5</span>)
+<span class="kw">system.time</span>(compute_mean$<span class="kw">base</span>(x))
+<span class="co">#&gt;    user  system elapsed </span>
+<span class="co">#&gt;       0       0       0</span>
+<span class="kw">system.time</span>(compute_mean[[<span class="dv">2</span>]](x))
+<span class="co">#&gt;    user  system elapsed </span>
+<span class="co">#&gt;       0       0       0</span>
+<span class="kw">system.time</span>(compute_mean[[<span class="st">&quot;manual&quot;</span>]](x))
+<span class="co">#&gt;    user  system elapsed </span>
+<span class="co">#&gt;    0.09    0.00    0.09</span></code></pre>
+<p>To call each function (e.g., to check that they all return the same results), use <code>lapply()</code>. We’ll need either an anonymous function or a new named function, since there isn’t a built-in function to handle this situation.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">lapply</span>(compute_mean, function(f) <span class="kw">f</span>(x))
+<span class="co">#&gt; $base</span>
+<span class="co">#&gt; [1] 0.4994771</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; $sum</span>
+<span class="co">#&gt; [1] 0.4994771</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; $manual</span>
+<span class="co">#&gt; [1] 0.4994771</span>
+
+call_fun &lt;-<span class="st"> </span>function(f, ...) <span class="kw">f</span>(...)
+<span class="kw">lapply</span>(compute_mean, call_fun, x)
+<span class="co">#&gt; $base</span>
+<span class="co">#&gt; [1] 0.4994771</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; $sum</span>
+<span class="co">#&gt; [1] 0.4994771</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; $manual</span>
+<span class="co">#&gt; [1] 0.4994771</span></code></pre>
+<p>To time each function, we can combine <code>lapply()</code> and <code>system.time()</code>:</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">lapply</span>(compute_mean, function(f) <span class="kw">system.time</span>(<span class="kw">f</span>(x)))
+<span class="co">#&gt; $base</span>
+<span class="co">#&gt;    user  system elapsed </span>
+<span class="co">#&gt;       0       0       0 </span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; $sum</span>
+<span class="co">#&gt;    user  system elapsed </span>
+<span class="co">#&gt;       0       0       0 </span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; $manual</span>
+<span class="co">#&gt;    user  system elapsed </span>
+<span class="co">#&gt;    0.06    0.00    0.06</span></code></pre>
+<p>Another use for a list of functions is to summarise an object in multiple ways. To do that, we could store each summary function in a list, and then run them all with <code>lapply()</code>:</p>
+<pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="dv">1</span>:<span class="dv">10</span>
+funs &lt;-<span class="st"> </span><span class="kw">list</span>(
+  <span class="dt">sum =</span> sum,
+  <span class="dt">mean =</span> mean,
+  <span class="dt">median =</span> median
+)
+<span class="kw">lapply</span>(funs, function(f) <span class="kw">f</span>(x))
+<span class="co">#&gt; $sum</span>
+<span class="co">#&gt; [1] 55</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; $mean</span>
+<span class="co">#&gt; [1] 5.5</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; $median</span>
+<span class="co">#&gt; [1] 5.5</span></code></pre>
+<p>What if we wanted our summary functions to automatically remove missing values? One approach would be make a list of anonymous functions that call our summary functions with the appropriate arguments:</p>
+<pre class="sourceCode r"><code class="sourceCode r">funs2 &lt;-<span class="st"> </span><span class="kw">list</span>(
+  <span class="dt">sum =</span> function(x, ...) <span class="kw">sum</span>(x, ..., <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),
+  <span class="dt">mean =</span> function(x, ...) <span class="kw">mean</span>(x, ..., <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),
+  <span class="dt">median =</span> function(x, ...) <span class="kw">median</span>(x, ..., <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
+)
+<span class="kw">lapply</span>(funs2, function(f) <span class="kw">f</span>(x))
+<span class="co">#&gt; $sum</span>
+<span class="co">#&gt; [1] 55</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; $mean</span>
+<span class="co">#&gt; [1] 5.5</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; $median</span>
+<span class="co">#&gt; [1] 5.5</span></code></pre>
+<p>This, however, leads to a lot of duplication. Apart from a different function name, each function is almost identical. A better approach would be to modify our <code>lapply()</code> call to include the extra argument:</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">lapply</span>(funs, function(f) <span class="kw">f</span>(x, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>))</code></pre>
+<h3>Moving lists of functions to the global environment</h3>
+<p>From time to time you may create a list of functions that you want to be available without having to use a special syntax. For example, imagine you want to create HTML code by mapping each tag to an R function. The following example uses a function factory to create functions for the tags <code>&lt;p&gt;</code> (paragraph), <code>&lt;b&gt;</code> (bold), and <code>&lt;i&gt;</code> (italics).</p>
+<pre class="sourceCode r"><code class="sourceCode r">simple_tag &lt;-<span class="st"> </span>function(tag) {
+  <span class="kw">force</span>(tag)
+  function(...) {
+    <span class="kw">paste0</span>(<span class="st">&quot;&lt;&quot;</span>, tag, <span class="st">&quot;&gt;&quot;</span>, <span class="kw">paste0</span>(...), <span class="st">&quot;&lt;/&quot;</span>, tag, <span class="st">&quot;&gt;&quot;</span>)
+  }
+}
+tags &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;p&quot;</span>, <span class="st">&quot;b&quot;</span>, <span class="st">&quot;i&quot;</span>)
+html &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">setNames</span>(tags, tags), simple_tag)</code></pre>
+<p>I’ve put the functions in a list because I don’t want them to be available all the time. The risk of a conflict between an existing R function and an HTML tag is high. But keeping them in a list makes code more verbose:</p>
+<pre class="sourceCode r"><code class="sourceCode r">html$<span class="kw">p</span>(<span class="st">&quot;This is &quot;</span>, html$<span class="kw">b</span>(<span class="st">&quot;bold&quot;</span>), <span class="st">&quot; text.&quot;</span>)
+<span class="co">#&gt; [1] &quot;&lt;p&gt;This is &lt;b&gt;bold&lt;/b&gt; text.&lt;/p&gt;&quot;</span></code></pre>
+<p>Depending on how long we want the effect to last, you have three options to eliminate the use of <code>html$</code>:</p>
+<ul>
+<li><p>For a very temporary effect, you can use <code>with()</code>: </p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">with</span>(html, <span class="kw">p</span>(<span class="st">&quot;This is &quot;</span>, <span class="kw">b</span>(<span class="st">&quot;bold&quot;</span>), <span class="st">&quot; text.&quot;</span>))
+<span class="co">#&gt; [1] &quot;&lt;p&gt;This is &lt;b&gt;bold&lt;/b&gt; text.&lt;/p&gt;&quot;</span></code></pre></li>
+<li><p>For a longer effect, you can <code>attach()</code> the functions to the search path, then <code>detach()</code> when you’re done:</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">attach</span>(html)
+<span class="kw">p</span>(<span class="st">&quot;This is &quot;</span>, <span class="kw">b</span>(<span class="st">&quot;bold&quot;</span>), <span class="st">&quot; text.&quot;</span>)
+<span class="co">#&gt; [1] &quot;&lt;p&gt;This is &lt;b&gt;bold&lt;/b&gt; text.&lt;/p&gt;&quot;</span>
+<span class="kw">detach</span>(html)</code></pre></li>
+<li><p>Finally, you could copy the functions to the global environment with <code>list2env()</code>. You can undo this by deleting the functions after you’re done. </p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">list2env</span>(html, <span class="kw">environment</span>())
+<span class="co">#&gt; &lt;environment: R_GlobalEnv&gt;</span>
+<span class="kw">p</span>(<span class="st">&quot;This is &quot;</span>, <span class="kw">b</span>(<span class="st">&quot;bold&quot;</span>), <span class="st">&quot; text.&quot;</span>)
+<span class="co">#&gt; [1] &quot;&lt;p&gt;This is &lt;b&gt;bold&lt;/b&gt; text.&lt;/p&gt;&quot;</span>
+<span class="kw">rm</span>(<span class="dt">list =</span> <span class="kw">names</span>(html), <span class="dt">envir =</span> <span class="kw">environment</span>())</code></pre></li>
+</ul>
+<p>I recommend the first option, using <code>with()</code>, because it makes it very clear when code is being executed in a special context and what that context is.</p>
+<h3>Exercises</h3>
+<ol style="list-style-type: decimal">
+<li><p>Implement a summary function that works like <code>base::summary()</code>, but uses a list of functions. Modify the function so it returns a closure, making it possible to use it as a function factory.</p></li>
+<li><p>Which of the following commands is equivalent to <code>with(x, f(z))</code>?</p>
+<ol style="list-style-type: lower-alpha">
+<li><code>x$f(x$z)</code>.</li>
+<li><code>f(x$z)</code>.</li>
+<li><code>x$f(z)</code>.</li>
+<li><code>f(z)</code>.</li>
+<li>It depends.</li>
+</ol></li>
+</ol>
+<h2 id="numerical-integration">Case study: numerical integration</h2>
+<p>To conclude this chapter, I’ll develop a simple numerical integration tool using first-class functions. Each step in the development of the tool is driven by a desire to reduce duplication and to make the approach more general. </p>
+<p>The idea behind numerical integration is simple: find the area under a curve by approximating the curve with simpler components. The two simplest approaches are the <strong>midpoint</strong> and <strong>trapezoid</strong> rules. The midpoint rule approximates a curve with a rectangle. The trapezoid rule uses a trapezoid. Each takes the function we want to integrate, <code>f</code>, and a range of values, from <code>a</code> to <code>b</code>, to integrate over. For this example, I’ll try to integrate <code>sin x</code> from 0 to <span class="math">\(\pi\)</span>. This is a good choice for testing because it has a simple answer: 2.</p>
+<pre class="sourceCode r"><code class="sourceCode r">midpoint &lt;-<span class="st"> </span>function(f, a, b) {
+  (b -<span class="st"> </span>a) *<span class="st"> </span><span class="kw">f</span>((a +<span class="st"> </span>b) /<span class="st"> </span><span class="dv">2</span>)
+}
+
+trapezoid &lt;-<span class="st"> </span>function(f, a, b) {
+  (b -<span class="st"> </span>a) /<span class="st"> </span><span class="dv">2</span> *<span class="st"> </span>(<span class="kw">f</span>(a) +<span class="st"> </span><span class="kw">f</span>(b))
+}
+
+<span class="kw">midpoint</span>(sin, <span class="dv">0</span>, pi)
+<span class="co">#&gt; [1] 3.141593</span>
+<span class="kw">trapezoid</span>(sin, <span class="dv">0</span>, pi)
+<span class="co">#&gt; [1] 1.923607e-16</span></code></pre>
+<p>Neither of these functions gives a very good approximation. To make them more accurate using the idea that underlies calculus: we’ll break up the range into smaller pieces and integrate each piece using one of the simple rules. This is called <strong>composite integration</strong>. I’ll implement it using two new functions:</p>
+<pre class="sourceCode r"><code class="sourceCode r">midpoint_composite &lt;-<span class="st"> </span>function(f, a, b, <span class="dt">n =</span> <span class="dv">10</span>) {
+  points &lt;-<span class="st"> </span><span class="kw">seq</span>(a, b, <span class="dt">length =</span> n +<span class="st"> </span><span class="dv">1</span>)
+  h &lt;-<span class="st"> </span>(b -<span class="st"> </span>a) /<span class="st"> </span>n
+
+  area &lt;-<span class="st"> </span><span class="dv">0</span>
+  for (i in <span class="kw">seq_len</span>(n)) {
+    area &lt;-<span class="st"> </span>area +<span class="st"> </span>h *<span class="st"> </span><span class="kw">f</span>((points[i] +<span class="st"> </span>points[i +<span class="st"> </span><span class="dv">1</span>]) /<span class="st"> </span><span class="dv">2</span>)
+  }
+  area
+}
+
+trapezoid_composite &lt;-<span class="st"> </span>function(f, a, b, <span class="dt">n =</span> <span class="dv">10</span>) {
+  points &lt;-<span class="st"> </span><span class="kw">seq</span>(a, b, <span class="dt">length =</span> n +<span class="st"> </span><span class="dv">1</span>)
+  h &lt;-<span class="st"> </span>(b -<span class="st"> </span>a) /<span class="st"> </span>n
+
+  area &lt;-<span class="st"> </span><span class="dv">0</span>
+  for (i in <span class="kw">seq_len</span>(n)) {
+    area &lt;-<span class="st"> </span>area +<span class="st"> </span>h /<span class="st"> </span><span class="dv">2</span> *<span class="st"> </span>(<span class="kw">f</span>(points[i]) +<span class="st"> </span><span class="kw">f</span>(points[i +<span class="st"> </span><span class="dv">1</span>]))
+  }
+  area
+}
+
+<span class="kw">midpoint_composite</span>(sin, <span class="dv">0</span>, pi, <span class="dt">n =</span> <span class="dv">10</span>)
+<span class="co">#&gt; [1] 2.008248</span>
+<span class="kw">midpoint_composite</span>(sin, <span class="dv">0</span>, pi, <span class="dt">n =</span> <span class="dv">100</span>)
+<span class="co">#&gt; [1] 2.000082</span>
+<span class="kw">trapezoid_composite</span>(sin, <span class="dv">0</span>, pi, <span class="dt">n =</span> <span class="dv">10</span>)
+<span class="co">#&gt; [1] 1.983524</span>
+<span class="kw">trapezoid_composite</span>(sin, <span class="dv">0</span>, pi, <span class="dt">n =</span> <span class="dv">100</span>)
+<span class="co">#&gt; [1] 1.999836</span></code></pre>
+<p>You’ll notice that there’s a lot of duplication between <code>midpoint_composite()</code> and <code>trapezoid_composite()</code>. Apart from the internal rule used to integrate over a range, they are basically the same. From these specific functions you can extract a more general composite integration function:</p>
+<pre class="sourceCode r"><code class="sourceCode r">composite &lt;-<span class="st"> </span>function(f, a, b, <span class="dt">n =</span> <span class="dv">10</span>, rule) {
+  points &lt;-<span class="st"> </span><span class="kw">seq</span>(a, b, <span class="dt">length =</span> n +<span class="st"> </span><span class="dv">1</span>)
+
+  area &lt;-<span class="st"> </span><span class="dv">0</span>
+  for (i in <span class="kw">seq_len</span>(n)) {
+    area &lt;-<span class="st"> </span>area +<span class="st"> </span><span class="kw">rule</span>(f, points[i], points[i +<span class="st"> </span><span class="dv">1</span>])
+  }
+
+  area
+}
+
+<span class="kw">composite</span>(sin, <span class="dv">0</span>, pi, <span class="dt">n =</span> <span class="dv">10</span>, <span class="dt">rule =</span> midpoint)
+<span class="co">#&gt; [1] 2.008248</span>
+<span class="kw">composite</span>(sin, <span class="dv">0</span>, pi, <span class="dt">n =</span> <span class="dv">10</span>, <span class="dt">rule =</span> trapezoid)
+<span class="co">#&gt; [1] 1.983524</span></code></pre>
+<p>This function takes two functions as arguments: the function to integrate and the integration rule. We can now add even better rules for integrating over smaller ranges:</p>
+<pre class="sourceCode r"><code class="sourceCode r">simpson &lt;-<span class="st"> </span>function(f, a, b) {
+  (b -<span class="st"> </span>a) /<span class="st"> </span><span class="dv">6</span> *<span class="st"> </span>(<span class="kw">f</span>(a) +<span class="st"> </span><span class="dv">4</span> *<span class="st"> </span><span class="kw">f</span>((a +<span class="st"> </span>b) /<span class="st"> </span><span class="dv">2</span>) +<span class="st"> </span><span class="kw">f</span>(b))
+}
+
+boole &lt;-<span class="st"> </span>function(f, a, b) {
+  pos &lt;-<span class="st"> </span>function(i) a +<span class="st"> </span>i *<span class="st"> </span>(b -<span class="st"> </span>a) /<span class="st"> </span><span class="dv">4</span>
+  fi &lt;-<span class="st"> </span>function(i) <span class="kw">f</span>(<span class="kw">pos</span>(i))
+
+  (b -<span class="st"> </span>a) /<span class="st"> </span><span class="dv">90</span> *
+<span class="st">    </span>(<span class="dv">7</span> *<span class="st"> </span><span class="kw">fi</span>(<span class="dv">0</span>) +<span class="st"> </span><span class="dv">32</span> *<span class="st"> </span><span class="kw">fi</span>(<span class="dv">1</span>) +<span class="st"> </span><span class="dv">12</span> *<span class="st"> </span><span class="kw">fi</span>(<span class="dv">2</span>) +<span class="st"> </span><span class="dv">32</span> *<span class="st"> </span><span class="kw">fi</span>(<span class="dv">3</span>) +<span class="st"> </span><span class="dv">7</span> *<span class="st"> </span><span class="kw">fi</span>(<span class="dv">4</span>))
+}
+
+<span class="kw">composite</span>(sin, <span class="dv">0</span>, pi, <span class="dt">n =</span> <span class="dv">10</span>, <span class="dt">rule =</span> simpson)
+<span class="co">#&gt; [1] 2.000007</span>
+<span class="kw">composite</span>(sin, <span class="dv">0</span>, pi, <span class="dt">n =</span> <span class="dv">10</span>, <span class="dt">rule =</span> boole)
+<span class="co">#&gt; [1] 2</span></code></pre>
+<p>It turns out that the midpoint, trapezoid, Simpson, and Boole rules are all examples of a more general family called <a href="http://en.wikipedia.org/wiki/Newton%E2%80%93Cotes_formulas">Newton-Cotes rules</a>. (They are polynomials of increasing complexity.) We can use this common structure to write a function that can generate any general Newton-Cotes rule:</p>
+<pre class="sourceCode r"><code class="sourceCode r">newton_cotes &lt;-<span class="st"> </span>function(coef, <span class="dt">open =</span> <span class="ot">FALSE</span>) {
+  n &lt;-<span class="st"> </span><span class="kw">length</span>(coef) +<span class="st"> </span>open
+
+  function(f, a, b) {
+    pos &lt;-<span class="st"> </span>function(i) a +<span class="st"> </span>i *<span class="st"> </span>(b -<span class="st"> </span>a) /<span class="st"> </span>n
+    points &lt;-<span class="st"> </span><span class="kw">pos</span>(<span class="kw">seq.int</span>(<span class="dv">0</span>, <span class="kw">length</span>(coef) -<span class="st"> </span><span class="dv">1</span>))
+
+    (b -<span class="st"> </span>a) /<span class="st"> </span><span class="kw">sum</span>(coef) *<span class="st"> </span><span class="kw">sum</span>(<span class="kw">f</span>(points) *<span class="st"> </span>coef)
+  }
+}
+
+boole &lt;-<span class="st"> </span><span class="kw">newton_cotes</span>(<span class="kw">c</span>(<span class="dv">7</span>, <span class="dv">32</span>, <span class="dv">12</span>, <span class="dv">32</span>, <span class="dv">7</span>))
+milne &lt;-<span class="st"> </span><span class="kw">newton_cotes</span>(<span class="kw">c</span>(<span class="dv">2</span>, -<span class="dv">1</span>, <span class="dv">2</span>), <span class="dt">open =</span> <span class="ot">TRUE</span>)
+<span class="kw">composite</span>(sin, <span class="dv">0</span>, pi, <span class="dt">n =</span> <span class="dv">10</span>, <span class="dt">rule =</span> milne)
+<span class="co">#&gt; [1] 1.993829</span></code></pre>
+<p>Mathematically, the next step in improving numerical integration is to move from a grid of evenly spaced points to a grid where the points are closer together near the end of the range, such as Gaussian quadrature. That’s beyond the scope of this case study, but you could implement it with similar techniques.</p>
+<h3>Exercises</h3>
+<ol style="list-style-type: decimal">
+<li><p>Instead of creating individual functions (e.g., <code>midpoint()</code>, <code>trapezoid()</code>, <code>simpson()</code>, etc.), we could store them in a list. If we did that, how would that change the code? Can you create the list of functions from a list of coefficients for the Newton-Cotes formulae?</p></li>
+<li><p>The trade-off between integration rules is that more complex rules are slower to compute, but need fewer pieces. For <code>sin()</code> in the range [0, <span class="math">\(\pi\)</span>], determine the number of pieces needed so that each rule will be equally accurate. Illustrate your results with a graph. How do they change for different functions? <code>sin(1 / x^2)</code> is particularly challenging.</p></li>
+</ol>
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+$(document).ready(function () {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+});
+
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+    "contents" : "library(shiny)\nlibrary(dplyr)\nlibrary(ggplot2)\n  \n\ngoogle_data = read.csv(file   =  \"http://www.google.org/flutrends/about/data/flu/us/data.txt\", \n                       header = TRUE,       # Data contain headers\n                       skip   = 10)         # Skip the first 10 lines\n\ngoogle_data$Date = as.Date(google_data$Date)\n\n# The shiny server will take user input information and use that to create our plot\nshinyServer(function(input, output) {\n  \n  # This is a function which filters our google_data information to only return data for\n  # the location that has been chosen and the dates that have been chosen\n  selectedData = reactive({\n\n    #  Select only data from the chosen location\n     selected_data = select_(google_data, Location = input$location, \"Date\") \n    #  Filter data so that only the date range we want is returned \n     filtered_data = filter(selected_data, Date >= input$dateRange[1] & Date <= input$dateRange[2] )\n     \n     # Finally, we return the data that we have selected\n     return(filtered_data)\n  })\n\n  # Once we have selected our data, we can make our plot. We call our plot \"google_plot\", the same name that is \n  # referenced in the ui.R file\n  output$google_plot = renderPlot({\n    p = ggplot(data = selectedData(), \n           aes(x = Date, \n               y = Location)) + \n      geom_line() + \n      labs(y ='Flutrends Indicator', title = input$location)\n    \n    return(p)\n  })\n})\n    \n   \n",
+    "created" : 1449591548568.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "662251314",
+    "id" : "D3DDB676",
+    "lastKnownWriteTime" : 1449280158,
+    "path" : "C:/Users/ericb/Dropbox/R code/ISDS R/Track 3/Track 3/Nicks Basic App/server.R",
+    "project_path" : "Nicks Basic App/server.R",
+    "properties" : {
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "type" : "r_source"
+}
